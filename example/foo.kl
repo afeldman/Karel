@@ -1,0 +1,38 @@
+PROGRAM foo
+CONST
+        a = 1
+        b = 2
+TYPE
+        test FROM bare
+        v = STRUCTURE
+               test: INTEGER
+        ENDSTRUCTURE
+
+        w FROM test2 = STRUCTURE
+               test: INTEGER
+        ENDSTRUCTURE
+VAR
+        var1: v
+        var2: test
+        var3: INTEGER
+        var4, var5: CHAR
+
+ROUTINE do_something (l: BYTE)
+ROUTINE do_something2 ( a: INTEGER = 60; b: String = "")
+ROUTINE do_something_too () : integer FROM bar
+
+BEGIN
+
+        Exit(0)
+
+END foo
+
+ROUTINE do_something
+VAR
+  a: INTEGER
+BEGIN
+ IF (a=0; a < 1000; ++a) THEN
+    a = do_something_too
+    print(a)
+ ENDIF
+END do_something

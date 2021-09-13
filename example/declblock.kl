@@ -1,0 +1,19 @@
+-{
+    Start build up example
+-}
+
+PROGRAM bar
+
+%CMOSVARS
+%ALPHABETIZE
+%COMMENT='test'
+%LOCKGROUP=2
+
+--  begin program
+BEGIN
+
+-- close program
+END bar
+
+
+-- routine implementation

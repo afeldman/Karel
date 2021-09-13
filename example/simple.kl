@@ -1,0 +1,47 @@
+PROGRAM test
+
+%ALPHABETIZE
+%CMOSVARS
+%CRTDEVICE
+%NOBUSYLAMP
+%NOLOCKGROUP
+%NOPAUSESHFT
+%TPMOTION
+%COMMENT = 'This is a comment'
+%DEFGROUP = 1
+%TIMESLICE = 2
+%DELAY = 1
+%STACKSIZE = 10
+%PRIORITY = 99
+%ENVIRONMENT = all
+%LOCKGROUP = 1,2,3,4,5,6,7,19
+%NOABORT = COMMAND
+%NOPAUSE = ERROR + TPENABLE
+
+CONST
+ Test2 = 1231
+ k = 'test'
+
+TYPE
+ a = REAL
+
+ b = STRUCTURE
+   a : INTEGER
+ ENDSTRUCTURE
+
+VAR
+ cmos_var,
+ test_var : INTEGER
+ test_var2 CMOS FROM file_name : FILE
+
+ROUTINE testroute1()
+ROUTINE testroute2(ardo: INTEGER)
+
+ROUTINE testroute3(a : INTEGER; b : STRING)
+ROUTINE testroute4(a,b : INTEGER; b : VECTOR)
+ROUTINE testroute5(a: REAL) : STRING
+ROUTINE testroute6(a : INTEGER) FROM abc
+
+BEGIN
+
+END test
