@@ -1,4 +1,8 @@
-PROGRAM bar     
+PROGRAM bar
+
+%ALPHABETIZE
+%CMOSVARS
+
 TYPE
         STRUCTURE test
                a : INTEGER
