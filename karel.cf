@@ -1,0 +1,454 @@
+-- karel programming language based on pascal
+--
+-- a karel program example:
+--
+{-
+        PROGRAM foo
+        CONST
+                a = 1
+                b = 2
+        TYPE
+                test FROM bare
+                STRUCTURE xyz_structure
+                          test : INTEGER
+                ENDSTRUCTURE
+                test2 : xyz_structure
+        VAR
+                var1: test2
+                var2: test
+                var3: INTEGER
+                var4, var5: CHAR
+        ROUTINE do_something (k: BYTE; a: INTEGER; b: String)
+        BEGIN
+        END foo
+
+        ROUTINE do_something
+        VAR
+                a: INTEGER
+        CONST
+        TYPE
+        BEGIN
+                IF (a=0; a < 1000; ++a) THEN
+                   print("a") FROM bare
+                ENDIF
+        END do_something
+
+-}
+-- comments in karel are c style or haskell style.
+-- I added a multiline haskell related command for karel
+comment "--";
+comment "{-" "-}";     -- haskell multiline comment
+
+-- each programm starts with a programm identifier
+--
+KarelGrammer. Karel ::= "PROGRAM" Ident OptLineEnd [DirectiveBlock] [DeclBlock] "BEGIN" [Stm] "END" Ident [RoutineDefinitionBlock] ;
+
+DirAlphabet. DirectiveBlock ::= "%ALPHABETIZE" ;
+DirCMOS.     DirectiveBlock ::= "%CMOSVARS" ;
+DirCRT.      DirectiveBlock ::= "%CRTDEVICE" ;
+DirNoBusy.   DirectiveBlock ::= "%NOBUSYLAMP" ;
+DirNoLock.   DirectiveBlock ::= "%NOLOCKGROUP" ;
+DirNoPauseS. DirectiveBlock ::= "%NOPAUSESHFT" ;
+DirRPMotion. DirectiveBlock ::= "%TPMOTION" ;
+DirComment.  DirectiveBlock ::= "%COMMENT" "=" QuotedString ;
+DirDefGroup. DirectiveBlock ::= "%DEFGROUP" "=" Integer ;
+DirDelay.    DirectiveBlock ::= "%DELAY" "=" Integer ;
+DirProp.     DirectiveBlock ::= "%PRIORITY" "=" Integer ;
+DirStackSiz. DirectiveBlock ::= "%STACKSIZE" "=" Integer ;
+DirTimeSliz. DirectiveBlock ::= "%TIMESLICE" "=" Integer ;
+DirEnv.      DirectiveBlock ::= "%ENVIRONMENT" "=" Ident ;
+DirLock.     DirectiveBlock ::= "%LOCKGROUP" "=" [ArrayIndexing] ;
+DirNoAbort.  DirectiveBlock ::= "%NOABORT" "=" ErrorCommandBlock ;
+DirNoPause.  DirectiveBlock ::= "%NOPAUSE" "=" ErrorCommandTPBlock ;
+DirInclude.  DirectiveBlock ::= "%INCLUDE" QuotedString ;
+[].    [DirectiveBlock] ::= ;
+(:).   [DirectiveBlock] ::= DirectiveBlock [DirectiveBlock] ;
+
+ECBCom.         ErrorCommandBlock ::= "COMMAND" ;
+ECBError.       ErrorCommandBlock ::= "ERROR" ;
+ECBECom.        ErrorCommandBlock ::= "ERROR" "+" "COMMAND" ;
+
+ECTBECB.        ErrorCommandTPBlock ::= ErrorCommandBlock ;
+ECTBCom.        ErrorCommandTPBlock ::= "COMMAND" "+" "TPENABLE" ;
+ECTBErr.        ErrorCommandTPBlock ::= "ERROR" "+" "TPENABLE" ;
+ECTBAnable.     ErrorCommandTPBlock ::= "ERROR" "+" "COMMAND" "+" "TPENABLE" ;
+
+DeclConst.      DeclBlock ::= ConstDeclBlock ;
+DeclType.       DeclBlock ::= TypeDeclBlock ;
+DeclVar.        DeclBlock ::= VarDeclBlock ;
+DeclRoutine.    DeclBlock ::= RoutineDeclBlock ;
+[].  [DeclBlock] ::= ;
+(:). [DeclBlock] ::= DeclBlock [DeclBlock] ;
+
+-- declaration of Constant values together in one Block starting with the CONST token
+CDB. ConstDeclBlock ::= "CONST" OptLineEnd [ConstDecl] ;
+CDIdent.        ConstDecl ::= Ident "=" Ident ;
+CDLiteral.      ConstDecl ::= Ident "=" Literal ;
+[].    [ConstDecl] ::= ;
+(:).   [ConstDecl] ::= ConstDecl [ConstDecl] ;
+
+-- declaration of the Type Block. Here are the place to define user specific types
+TCB. TypeDeclBlock ::= "TYPE" OptLineEnd [TypeDecl];
+TDeclU.  TypeDecl ::= Ident "FROM" Ident UserType;
+TUser.  TypeDecl ::= Ident "=" UserType ;
+TUserD. TypeDecl ::= UserType ;
+--[].    [TypeDecl] ::= ;
+(:[]). [TypeDecl] ::= TypeDecl ;
+(:).   [TypeDecl] ::= TypeDecl [TypeDecl] ;
+
+-- variable declaration block.
+VDB. VarDeclBlock ::= "VAR" OptLineEnd [VarDecl] ;
+VarDIden.  VarDecl ::= Ident "," OptLineEnd VarDecl ;
+VarDDtype. VarDecl ::= Ident MemTypes FromBlock ":" DataTypes ;
+[].    [VarDecl] ::= ;
+(:).   [VarDecl] ::= VarDecl [VarDecl] ;
+
+-- Routine Declaration Block implementation
+RoutineDeclarationBlock. RoutineDeclBlock ::= "ROUTINE" Ident RoutineParameter FromBlock;
+
+RoutineParamBrack.      RoutineParameter ::= "(" [ParameterField] ")" ;
+RoutineReturn.          RoutineParameter ::= "(" [ParameterField] ")" ":" ReturnDataTypes ;
+
+-- parameter datablock
+ParamFieldIdent.        ParameterField ::= ParamIdent ":" ParameterDataTypes ;
+ParamFieldDecl.         ParameterField ::= ParamIdent "," [ParamIdent] ":" ParameterDataTypes ;
+ParamDefaultDecl.       ParameterField ::= ParamIdent "," [ParamIdent] ":" ParameterDataTypes "=" Expression ;
+
+[].    [ParameterField] ::= ;
+(:[]). [ParameterField] ::= ParameterField ;
+(:).   [ParameterField] ::= ParameterField ";" [ParameterField] ;
+
+ParamType. ParamIdent ::= Ident;
+(:[]). [ParamIdent] ::= ParamIdent ;
+(:).   [ParamIdent] ::= ParamIdent "," [ParamIdent] ;
+
+-- routine definition Block
+RoutineDefineBlock. RoutineDefinitionBlock ::= "ROUTINE" Ident OptLineEnd [DeclBlock] "BEGIN" [Stm] "END" Ident ;
+[].    [RoutineDefinitionBlock] ::= ;
+(:).   [RoutineDefinitionBlock] ::= RoutineDefinitionBlock [RoutineDefinitionBlock] ;
+
+-- The keeword FROM us often use so one special Block for reuse
+FromBIdent. FromBlock ::= "FROM" Ident ;
+FromBEmpty. FromBlock ::= Empty ;
+
+------------------------------------ Global Condition -----------------------------------
+GCBase.         GlobalCondition ::= "(" GlobalCondition ")" ;
+GCError.        GlobalCondition ::= "ERROR" "[" [ArrayIndexing]  "]" ;
+GCEvent.        GlobalCondition ::= "EVENT" "[" [ArrayIndexing]  "]" ;
+GCSemaphore.    GlobalCondition ::= "SEMAPHORE" "[" [ArrayIndexing]  "]" ;
+GCPowerUp.      GlobalCondition ::= "POWERUP" ;
+GCAbort.        GlobalCondition ::= "ABORT" GlobalConditionSelect ;
+GCPause.        GlobalCondition ::= "PAUSE" GlobalConditionSelect ;
+GCCONTINUE.     GlobalCondition ::= "CONTINUE" GlobalConditionSelect ;
+GCVarAccess.    GlobalCondition ::= GlobalConditionBool  ;
+GCPortCond.     GlobalCondition ::= Ident "[" Expression "]" Sign;
+GCNotPortCond.  GlobalCondition ::= "NOT" Ident "[" Expression "]" Sign;
+
+GCSProg.        GlobalConditionSelect ::= "PROGRAM" "[" Expression "]" ;
+GCSEmpty.       GlobalConditionSelect ::= Empty ;
+
+GCBEqual.       GlobalConditionBool ::= Ident "=" GlobalConditionVarSelect ;
+GCBNEqual.      GlobalConditionBool ::= Ident "<>" GlobalConditionVarSelect ;
+GCBLess.        GlobalConditionBool ::= Ident "<" GlobalConditionVarSelect ;
+GCBLessEQ.      GlobalConditionBool ::= Ident "<=" GlobalConditionVarSelect ;
+GCBGread.       GlobalConditionBool ::= Ident ">" GlobalConditionVarSelect ;
+GCBGEQ.         GlobalConditionBool ::= Ident ">=" GlobalConditionVarSelect ;
+
+GCVSBase.       GlobalConditionVarSelect ::= Constant ;
+GCVSEval.       GlobalConditionVarSelect ::= "EVAL" "(" Expression ")" ;
+
+------------------------------------ Condition handler Actions -------------------
+CHAEmpty.       ConditionHandlerAction ::= Empty ;
+CHANoAbort.     ConditionHandlerAction ::= "NOABORT" ;
+CHANoPause.     ConditionHandlerAction ::= "NOPAUSE" ;
+CHAUnPause.     ConditionHandlerAction ::= "UNPAUSE" ;
+CHANoMessage.   ConditionHandlerAction ::= "NOMESSAGE" ;
+CHARestore.     ConditionHandlerAction ::= "RESTORE" ;
+CHAHold.        ConditionHandlerAction ::= "HOLD" Groups ;
+CHAUnHold.      ConditionHandlerAction ::= "UNHOLD" Groups ;
+CHAResum.       ConditionHandlerAction ::= "RESUME" Groups ;
+CHAStop.        ConditionHandlerAction ::= "STOP" Groups ;
+CHACancel.      ConditionHandlerAction ::= "CANCEL" Groups ;
+CHAEnable.      ConditionHandlerAction ::= "ENABLE" "CONDITION" "[" Expression "]" ;
+CHADisable.     ConditionHandlerAction ::= "DISABLE" "CONDITION" "[" Expression "]" ;
+CHASignalEvent. ConditionHandlerAction ::= "SIGNAL" "EVENT" "[" Expression "]" ;
+CHASignalSema.  ConditionHandlerAction ::= "SIGNAL" "SEMAPHORE" "[" Expression "]" ;
+CHAIdent.       ConditionHandlerAction ::= Ident ;
+CHAPulse.       ConditionHandlerAction ::= "PULSE" PulseOut "[" Expression "]" "FOR" Integer ;
+CHAAbort.       ConditionHandlerAction ::= "ABORT" ;
+CHAAbortProg.   ConditionHandlerAction ::= "ABORT" "PROGRAM" "[" Expression "]" ;
+CHAContinue.    ConditionHandlerAction ::= "CONTINUE" ;
+CHAContProg.    ConditionHandlerAction ::= "CONTINUE" "PROGRAM" "[" Expression "]";
+CHAPause.       ConditionHandlerAction ::= "PAUSE" ;
+CHAPauseProg.   ConditionHandlerAction ::= "PAUSE" "PROGRAM" "[" Expression "]";
+CHAVarAccess.   ConditionHandlerAction ::= VarAccess "=" Ident "[" Expression "]" ;
+CHAVarAccEval.  ConditionHandlerAction ::= VarAccess "=" "EVAL" "(" Expression ")" ;
+CHAVarAccConst. ConditionHandlerAction ::= VarAccess "=" Constant ;
+CHAPortVA.      ConditionHandlerAction ::= Integer "[" Expression "]" "=" VarAccess ;
+CHAPortEval.    ConditionHandlerAction ::= Integer "[" Expression "]" "=" "EVAL" "(" Expression ")" ;
+
+[].             [ConditionHandlerAction] ::= ;
+(:).            [ConditionHandlerAction] ::= ConditionHandlerAction "," [ConditionHandlerAction] ;
+
+------------------------------------ Statements ----------------------------------
+SAttach.        Stm ::= "ATTACH" ;
+SRelease.       Stm ::= "RELEASE" ;
+SAbort.         Stm ::= "ABORT" ;
+SAbortP.        Stm ::= "ABORT" "PROGRAM" "[" [ArrayIndexing] "]";
+SAssign.        Stm ::= Ident "=" Expression ;
+SCloseFile.     Stm ::= "CLOSE" "FILE" Ident ;
+SCloseHand.     Stm ::= "CLOSE" "HAND" Integer ;
+SDelay.         Stm ::= "DELAY" Integer ;
+SConnect.       Stm ::= "CONNECT" "TIMER" "TO" Integer ;
+SDisable.       Stm ::= "DISABLE" "CONDITION" "[" [ArrayIndexing] "]" ;
+SDisconectT.    Stm ::= "DISCONNECT" "TIMER" Integer ;
+SEnable.        Stm ::= "ENABLE" "CONDITION" "[" [ArrayIndexing] "]" ;
+SOpenHand.      Stm ::= "OPEN" "HAND" Integer ;
+SPurge.         Stm ::= "PURGE" "CONDITION" "[" [ArrayIndexing] "]" ;
+SRelax.         Stm ::= "RELAX" "HAND" Integer ;
+SSignal.        Stm ::= "SIGNAL" "EVENT" "[" [ArrayIndexing] "]" ;
+SCancel.        Stm ::= "CANCEL";
+SCancelFile.    Stm ::= "CANCEL" "FILE" Ident ;
+SCancelGroup.   Stm ::= "CANCEL" Groups;
+SCallparamExp.  Stm ::= Ident "(" Expression ")" ;
+SForTo.         Stm ::= "FOR" Ident "=" Integer "TO" Integer "DO" [Stm] "ENDFOR" ;
+SForDownTo.     Stm ::= "FOR" Ident "=" Integer "DOWNTO" Integer "DO" [Stm] "ENDFOR" ;
+SGoTo.          Stm ::= "GOTO" Ident ;
+SGo_To.         Stm ::= "GO" "TO" Ident ;
+SHold.          Stm ::= "HOLD" ;
+SHoleGroup.     Stm ::= "HOLD" Groups ;
+SIfThen.        Stm ::= "IF" Expression "THEN" [Stm] "ENDIF";
+SIfThenElse.    Stm ::= "IF" Expression "THEN" [Stm] "ELSE" [Stm] "EDNIF" ;
+SPause.         Stm ::= "PAUSE" ;
+SPauseProgram.  Stm ::= "PAUSE" "PROGRAM" "[" [ArrayIndexing] "]" ;
+SPulse.         Stm ::= "PULSE" PulseOut "[" [ArrayIndexing] "]" "FOR" Expression Nwait ;
+SOpenFile.      Stm ::= "OPEN" "FILE" Ident "(" Expression "," Expression ")" ;
+SReadIdent.     Stm ::= "READ" Ident "(" [ReadItem] ")" ;
+SRead.          Stm ::= "READ" "(" [ReadItem] ")" ;
+SReturn.        Stm ::= "RETURN" ;
+SReturnExp.     Stm ::= "RETURN" "(" Expression ")" ;
+SUsing.         Stm ::= "USING" [VarAccess] "DO" [Stm] "ENDUSING" ;
+SUnHold.        Stm ::= "UNHOLD" ;
+SUnHoldExt.     Stm ::= "UNHOLD" Groups ;
+SStop.          Stm ::= "STOP" ;
+SStopExt.       Stm ::= "STOP" Groups ;
+SSelect.        Stm ::= "SELECT" Expression "OF" [CaseStm] "ENDSELECT" ;
+SSelectElse.    Stm ::= "SELECT" Expression "OF" [CaseStm] "ELSE" [Stm] "ENDSELECT" ;
+SRepeat.        Stm ::= "REPEAT" [Stm] "UNTIL" Expression ;
+SResum.         Stm ::= "RESUM" ;
+SResumGroup.    Stm ::= "RESUM" Groups ;
+SWait.          Stm ::= "WAIT" "FOR" WaitSelect ;
+SWhile.         Stm ::= "WHILE" Expression "DO" [Stm] "ENDWHILE" ;
+SWrite.         Stm ::= "WRITE" Ident "(" [WriteItem] ")" ;
+SCondition.     Stm ::= "CONDITION" "[" [ArrayIndexing] "]" ":" ConditionWhenStm "ENDCONDITION";
+SConditionWith. Stm ::= "CONDITION" "[" [ArrayIndexing] "]" ":" "WITH" [ConditionWithStm] ConditionWhenStm "ENDCONDITION";
+
+CWSTMWhen.      ConditionWhenStm ::= "WHEN" GlobalConditionList "DO" [ConditionHandlerAction] ;
+
+CWSTMWith.      ConditionWithStm ::= Ident "[" [ArrayIndexing] "]" Ident "=" Expression ;
+[].             [ConditionWithStm] ::= ;
+(:).            [ConditionWithStm] ::= ConditionWithStm "," [ConditionWithStm];
+
+GCLAnd.         GlobalConditionList ::= GlobalCondition "AND" GlobalCondition ;
+GCLOr.          GlobalConditionList ::= GlobalCondition "OR" GlobalCondition ;
+
+GroupBase.      Groups ::=  "GROUP" "[" [ArrayIndexing] "]";
+
+[].    [Stm] ::= ;
+(:).   [Stm] ::= Stm [Stm] ;
+
+WaitSelectGC.   WaitSelect ::= GlobalCondition ;
+WaitSelectAND.  WaitSelect ::= GlobalCondition "AND" GlobalCondition ;
+WaitSelectOR.   WaitSelect ::= GlobalCondition "OR" GlobalCondition ;
+
+SCase.  CaseStm ::= "CASE" "(" [ArrayIndexing] ")" ":" [Stm] ;
+[].     [CaseStm] ::= ;
+(:).    [CaseStm] ::= CaseStm ";" [CaseStm] ;
+
+SVarAccess.      VarAccess ::= Ident;
+SVarAccessIdent. VarAccess ::= VarAccess "." Ident;
+SVarAccessArray. VarAccess ::= VarAccess "[" [ArrayIndexing] "]" ;
+SVarAccessPath.  VarAccess ::= VarAccess "[" Expression ".." Expression "]" ;
+[].     [VarAccess] ::= ;
+(:).    [VarAccess] ::= VarAccess "," [VarAccess] ;
+
+SReadItem.      ReadItem ::= CR FormatSpec ;
+[].     [ReadItem] ::= ;
+(:).    [ReadItem] ::= ReadItem "," [ReadItem] ;
+
+SWriteItem.     WriteItem ::= CR FormatSpec ;
+SWriteItemExp.  WriteItem ::= Expression FormatSpec ;
+[].     [WriteItem] ::= ;
+(:).    [WriteItem] ::= WriteItem "," [WriteItem] ;
+
+FormatSpec1.     FormatSpec ::= "::" Expression ;
+FormatSpec2.     FormatSpec ::= "::" Expression "::" Expression;
+FormatSpecEmpty. FormatSpec ::= Empty ;
+
+RIDefault.      CR ::= "CR" ;
+RICar.          CR ::= Ident ;
+
+SSPulseOut.     PulseOut ::= "DOUT" ;
+SSPulseRDO.     PulseOut ::= "RDO" ;
+
+SSWait.         Nwait    ::= "NOWAIT" ;
+SSWaitEmapty.   Nwait    ::= Empty ;
+
+
+------------------------------------ Expressions ---------------------------------
+EIBrack.  Expression  ::= Ident "(" Expression ")";
+EBrack.   Expression  ::= "(" Expression ")" ;
+EEqual.   Expression  ::= Expression    "="     Expression1 ;
+ENEqual.  Expression  ::= Expression    "<>"    Expression1 ;
+ELess.    Expression  ::= Expression    "<"     Expression1 ;
+ELeq.     Expression  ::= Expression    "<="    Expression1 ;
+Egret.    Expression  ::= Expression    ">"     Expression1 ;
+Egeq.     Expression  ::= Expression    ">="    Expression1 ;
+Esp.      Expression  ::= Expression    ">=<"   Expression1 ;
+EAdd.     Expression1 ::= Expression    "+"     Expression2 ;
+ESub.     Expression1 ::= Expression    "-"     Expression2 ;
+EOR.      Expression1 ::= Expression    "OR"    Expression2 ;
+EPlus.    Expression1 ::= "+"                   Expression2 ;
+EMinus.   Expression1 ::= "-"                   Expression2 ;
+EMul.     Expression2 ::= Expression    "*"     Expression3 ;
+EAdiv.    Expression2 ::= Expression    "/"     Expression3 ;
+EAnd.     Expression2 ::= Expression    "AND"   Expression3 ;
+EMOD.     Expression2 ::= Expression    "MOD"   Expression3 ;
+EDiv.     Expression2 ::= Expression    "DIV"   Expression3 ;
+ENot.     Expression3 ::= Expression    "NOT"   Expression4 ;
+EDot.     Expression3 ::= Expression    ":"     Expression4 ;
+EAt.      Expression3 ::= Expression    "@"     Expression4 ;
+EHash.    Expression3 ::= Expression    "#"     Expression4 ;
+EIdent.   Expression4 ::= Ident;
+EDouble.  Expression4 ::= Double ;
+EInt.     Expression4 ::= Integer ;
+EQString. Expression4 ::= QuotedString ;
+
+------------------------------------ types ---------------------------------
+-- user types
+UserTypeDT.        UserType ::= Ident "=" DataTypes;
+UserTypeStruct.    UserType ::= "STRUCTURE" OptLineEnd [VarDecl] "ENDSTRUCTURE" ;
+
+--Field. Field ::= Ident ":" StructuredArrayType ;
+--[].    [Field] ::= ;
+--(:).   [Field] ::= Field [Field] ;
+
+-- EmptyType
+EmpyType. Empty ::= ;
+
+-- MemtType
+MemTypeDMOS.  MemTypes ::= "CMOS" ;
+MemTypeDRAM.  MemTypes ::=  "DRAM" ;
+MemTypeEmpty. MemTypes ::=  Empty ;
+
+-- return Datatypes
+RDTIdent.       ReturnDataTypes ::= Ident ;
+RDTChar.        ReturnDataTypes ::= Char ;
+RDTInt.         ReturnDataTypes ::= "INTEGER" ;
+RDTReal.        ReturnDataTypes ::= "REAL" ;
+RDTBool.        ReturnDataTypes ::= "BOOLEAN" ;
+RDTVector.      ReturnDataTypes ::= "VECTOR" ;
+RDTConfig.      ReturnDataTypes ::= "CONFIG" ;
+RDTCommon.      ReturnDataTypes ::= "COMMON_ASSOC" ;
+RDTPos.         ReturnDataTypes ::= PositionDataTypes "IN" "GROUP" "[" Integer "]" ;
+RDTString.      ReturnDataTypes ::= "STRING" ;
+RDTArray.       ReturnDataTypes ::= "ARRAY" "[" [ReturnArrayIndex] "]" "OF" StructuredArrayType ;
+
+-- parameter DataTypes
+PDTIdent.       ParameterDataTypes ::= Ident ;
+PDTChar.        ParameterDataTypes ::= Char ;
+PDTInt.         ParameterDataTypes ::= "INTEGER" ;
+PDTReal.        ParameterDataTypes ::= "REAL" ;
+PDTBool.        ParameterDataTypes ::= "BOOLEAN" ;
+PDTVector.      ParameterDataTypes ::= "VECTOR" ;
+PDTVis.         ParameterDataTypes ::= "VIS_PROCESS" ;
+PDTModel.       ParameterDataTypes ::= "MODEL" ;
+PDTCam.         ParameterDataTypes ::= "CAM_SETUP" ;
+PDTFile.        ParameterDataTypes ::= "FILE" ;
+PDTConf.        ParameterDataTypes ::= "CONFIG" ;
+PDTPath.        ParameterDataTypes ::= "PATH" PathDataType ;
+PDTCommon.      ParameterDataTypes ::= "COMMON_ASSOC" ;
+PDTPos.         ParameterDataTypes ::= PositionDataTypes "IN" "GROUP" "[" Integer "]" ;
+PDTString.      ParameterDataTypes ::= "STRING" ;
+PDTArray.       ParameterDataTypes ::= "ARRAY" "[" "ARRAY" "[" [ReturnArrayIndex] "]" "OF" StructuredArrayType ;
+
+-- datatypes
+DTIdent.        DataTypes ::= Ident ;
+DTChar.         DataTypes ::= Char ;
+DTInt.          DataTypes ::= "INTEGER" ;
+DTReal.         DataTypes ::= "REAL" ;
+DTBool.         DataTypes ::= "BOOLEAN" ;
+DTVector.       DataTypes ::= "VECTOR" ;
+DTVis.          DataTypes ::= "VIS_PROCESS" ;
+DTModel.        DataTypes ::= "MODEL" ;
+DTCam.          DataTypes ::= "CAM_SETUP" ;
+DTFile.         DataTypes ::= "FILE" ;
+DTConf.         DataTypes ::= "CONFIG" ;
+DTcommon.       DataTypes ::= "COMMON_ASSOC" ;
+DTPos.          DataTypes ::= PositionDataTypes "IN" "GROUP" "[" Integer "]" ;
+DTString.       DataTypes ::= "STRING" "[" Integer "]" ;
+DTPath.         DataTypes ::= "PATH" PathDataType ;
+DTArray.        DataTypes ::= "ARRAY" "[" [ArrayIndexing] "]" "OF" StructuredArrayType ;
+
+-- structured array type
+SATDT.    StructuredArrayType ::= DataTypes;
+SATByte.  StructuredArrayType ::= "BYTE" ;
+SATShort. StructuredArrayType ::= "SHORT" ;
+
+-- path data type
+PathDTHeader.    PathDataType ::= "PATH HEADER" "=" Ident  ;
+PathDTNode.      PathDataType ::= "NODE DATA" "=" Ident ;
+PathDtEmpty.     PathDataType ::= Empty ;
+PathDtHeaderExt. PathDataType ::= "PATH HEADER" "=" Ident  "," "NODE DATA" "=" Ident ;
+
+-- position datatypes
+PDTyPos.         PositionDataTypes ::= "POSITION" ;
+PDTyXYZ.         PositionDataTypes ::= "XYZWPR" ;
+PDTyJPos.        PositionDataTypes ::= "JOINTPOS" ;
+PDTyJPos1.       PositionDataTypes ::= "JOINTPOS1" ;
+PDTyJPos2.       PositionDataTypes ::= "JOINTPOS2" ;
+PDTyJPos3.       PositionDataTypes ::= "JOINTPOS3" ;
+PDTyJPos4.       PositionDataTypes ::= "JOINTPOS4" ;
+PDTyJPos5.       PositionDataTypes ::= "JOINTPOS5" ;
+PDTyJPos6.       PositionDataTypes ::= "JOINTPOS6" ;
+PDTyJPos7.       PositionDataTypes ::= "JOINTPOS7" ;
+PDTyJPos8.       PositionDataTypes ::= "JOINTPOS8" ;
+PDTyJPos9.       PositionDataTypes ::= "JOINTPOS9" ;
+PDTyXYZEXT.      PositionDataTypes ::= "XYZWPREXT" ;
+PDTyGAssoc.      PositionDataTypes ::= "GROUP_ASSOC" ;
+
+-- Booldatatypes True | False
+BDTTrue.  BoolDataTypes ::= "TRUE" ;
+BDTFalse. BoolDataTypes ::= "FALSE" ;
+
+-- arraxy indexing => list with comma seperator
+IntArrayIndex.  ArrayIndexing ::= Integer;
+[].    [ArrayIndexing] ::= ;
+(:[]). [ArrayIndexing] ::= ArrayIndexing;
+(:).   [ArrayIndexing] ::= ArrayIndexing "," [ArrayIndexing] ;
+
+--return index for array
+ReturnArrayInteger. ReturnArrayIndex ::= Integer ;
+ReturnArrayAster.   ReturnArrayIndex ::= "*" ;
+[].    [ReturnArrayIndex] ::= ;
+(:[]). [ReturnArrayIndex] ::= ReturnArrayIndex;
+(:).   [ReturnArrayIndex] ::= ReturnArrayIndex "," [ReturnArrayIndex] ;
+
+SignPlus.       Sign ::= "+" ;
+SignMinus.      Sign ::= "-" ;
+SignEmpty.      Sign ::= Empty ;
+
+-- change to unsigned
+LiteralInteger. Literal ::= Integer ;
+LiteralQuoted.  Literal ::= QuotedString ;
+LiteralDouble.  Literal ::= Double ;
+
+ConstLiteral.   Constant ::= Literal ;
+ConstIdent.     Constant ::= Ident ;
+
+OptLineEndL.     OptLineEnd ::= LineEnd ;
+OptLineEndEmpty. OptLineEnd1 ::= Empty ;
+
+-- token Path (letter|'/')+ ;
+token QuotedString '\'' ((char - ["'\\"]) | ('\\' ["'\\nt"]))* '\'';
+token LineEnd ((';'|'\n')+) ;
