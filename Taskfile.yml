@@ -1,0 +1,28 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  distclean:
+    desc: "delete all bnfc files"
+    cmds:
+    - rm -Rf Karel
+    - rm Makefile
+    - rm Makefile.bak
+  build:
+    desc: "build bnfc"
+    cmds:
+    - bnfc --haskell -d -m karel.cf
+    - make
+  test:
+    desc: "test bnfc with test file"
+    cmds:
+    - Karel/Test test.karel
+  default:
+    cmds:
+    - bnfc --haskell -d -m karel.cf
+    - make 
+    silent: true

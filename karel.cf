@@ -39,28 +39,39 @@
 -- I added a multiline haskell related command for karel
 comment "--";
 -- haskell multiline comment
-comment "-{" "-}";     
+comment "-{" "-}";
 
--- tokens
-token QuotedString '\'' ((char - ["'\\"]) | ('\\' ["'\\nt"]))* '\'';
-token LineEnd ((';'|'\n')+) ;
+-- each karel programm starts with a programm identifier
+KarelGrammer. Karel ::= "program" Ident LineEnd ProgramBody;
 
+ProgramBody. ProgramBody ::= "begin" [Stm] "end" Ident LineEnd;
+-- statementlist
+separator Stm ";";
 
--- each programm starts with a programm identifier
-KarelGrammer. Karel ::= "PROGRAM" Ident [CompilerDerective] ProgramBody Ident;
+Labeled_Statement. Stm ::= Ident "::" Stm ; -- for the jump statement
+JumpStatementGOTO. Stm ::= "goto" Ident;        -- jump to statement
+JumpStatementGOTOSplit. Stm ::= "go" "to" Ident; -- maybe you like to seperte goto
+-- ExprStatement. Stm ::= Exporession_stm;
 
-PBody. ProgramBody ::= "BEGIN" "END" ;
+-- a lineend is a \n or ;
+rules LineEnd ::= ";" | "\n";
 
--- compiler derectives not used in this reimplementation.
-rules CompilerDerective ::= "%ALPHABETIZE" | "%CMOSVARS" | "%CRTDEVICE" | "%NOBUSYLAMP" | "%NOLOCKGROUP" | "%NOPAUSESHFT" | "%TPMOTION" | "%COMMENT" "=" QuotedString | "%DEFGROUP" "=" Integer | "%DELAY" "=" Integer | "%ENVIRONMENT" "=" Ident | "%LOCKGROUP" "=" [CompilerDerectiveIntList] | "%PRIORITY" "=" Integer | "%STACKSIZE" "=" Integer | "%TIMESLICE" "=" Integer | "%NOABORT" "=" CDINFO | "%NOPAUSE" "=" NOPAUSE ;
-terminator CompilerDerective "\n" ;
-CDIL. CompilerDerectiveIntList ::= Integer ;
-(:[]). [CompilerDerectiveIntList] ::= CompilerDerectiveIntList  ;
-(:).   [CompilerDerectiveIntList] ::= CompilerDerectiveIntList "," [CompilerDerectiveIntList] ;
-CDERR.       CDINFO ::= "ERROR" ;
-CDERRCOM.    CDINFO ::= "ERROR" "+" "COMMAND" ;
-CDCOM.       CDINFO ::= "COMMAND" ;
-NOPAUSEINFO.      NOPAUSE ::= CDINFO;
-NOPAUSEERRCOMTPE. NOPAUSE ::= "ERROR" "+" "COMMAND" "+" "TPENABLE" ;
-NOPAUSECOMTPE.    NOPAUSE ::= "COMMAND" "+" "TPENABLE" ;
+ConstIdent. Constant ::= Real;
+ConstChar. Constant ::= Character;
+ConstHex. Constant ::= Hex;
+ConstOctal. Constant ::= Octal;
+ConstInteger. Constant ::= Integer;
 
+token Character '\'' ((char - ["'\\"]) | ('\\' ["'\\ntr"])) '\'';
+
+token UnsignedInteger ["123456789"] digit*;
+
+-- real number
+token Real (((digit+ '.' digit+)|(digit+ '.')|('.' digit+))(('e'|'E')('-')? digit+)?
+                               )|((digit+ ('e'|'E')('-')? digit+));
+
+-- hex number
+token Hex '0' ('x'|'X') (digit | ["abcdef"] | ["ABCDEF"])+;
+
+-- octal number
+token Octal '0'["01234567"]*;
