@@ -44,13 +44,36 @@ comment "--";
 -- commend is equivalent to the haskel commens
 comment "-{" "-}";
 
--- tokens
+-- tokens at the beginning so easy to check first
 token QuotedString '\'' ((char - ["'\\"]) | ('\\' ["'\\nt"]))* '\'';
 token LineEnd ((';'|'\n')+) ;
 
+token Unsigned ["123456789"] digit*;
+token Hexadecimal '0' ('x'|'X') (digit | ["abcdef"] | ["ABCDEF"])+;
+token Octal '0'["01234567"]*;
+token KDouble (((digit+ '.')|('.' digit+))(('e'|'E') ('-')? digit+)?)|
+              (digit+ ('e'|'E') ('-')? digit+)|(digit+ '.' digit+ 'E' ('-')? digit+);
+
+-- constant types
+Efloat.        Constant ::= Double;
+Echar.         Constant ::= Char;
+Eunsigned.     Constant ::= Unsigned;
+Ehexadec.      Constant ::= Hexadecimal;
+Eoctal.        Constant ::= Octal;
+Ecdouble.      Constant ::= KDouble;
+Eint.          Constant ::= Integer;
+
+internal Elonger. Constant ::= Integer;
+internal Edouble. Constant ::= Double;
 
 -- each programm starts with a programm identifier followd by a compiler derictive
 -- next the 
 KarelGrammer. Karel ::= "PROGRAM" Ident ProgramBody Ident;
 
 PBody. ProgramBody ::= "BEGIN" "END" ;
+
+-- a literal
+Literalchar. Literal ::= " " char " ";
+Literalnum. Literal ::= Unsigned | Hexadecimal | Octal ;
+
+
