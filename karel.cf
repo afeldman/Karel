@@ -51,47 +51,6 @@ token LineEnd ((';'|'\n')+) ;
 
 -- each programm starts with a programm identifier followd by a compiler derictive
 -- next the 
-KarelGrammer. Karel ::= "PROGRAM" Ident [CompilerDerective] ProgramBody Ident;
+KarelGrammer. Karel ::= "PROGRAM" Ident ProgramBody Ident;
 
 PBody. ProgramBody ::= "BEGIN" "END" ;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
--- compiler derectives not used in this reimplementation.
-rules CompilerDerective ::= "%ALPHABETIZE" | "%CMOSVARS" | "%CRTDEVICE" | "%NOBUSYLAMP" | "%NOLOCKGROUP" | "%NOPAUSESHFT" | "%TPMOTION" | "%COMMENT" "=" QuotedString | "%DEFGROUP" "=" Integer | "%DELAY" "=" Integer | "%ENVIRONMENT" "=" Ident | "%LOCKGROUP" "=" [CompilerDerectiveIntList] | "%PRIORITY" "=" Integer | "%STACKSIZE" "=" Integer | "%TIMESLICE" "=" Integer | "%NOABORT" "=" CDINFO | "%NOPAUSE" "=" NOPAUSE ;
-terminator CompilerDerective "\n" ;
-
-CDIL. CompilerDerectiveIntList ::= Integer ;
-(:[]). [CompilerDerectiveIntList] ::= CompilerDerectiveIntList  ;
-(:).   [CompilerDerectiveIntList] ::= CompilerDerectiveIntList "," [CompilerDerectiveIntList] ;
-
--- cdinfo 
-CDERR.       CDINFO ::= "ERROR" ;
-CDERRCOM.    CDINFO ::= "ERROR" "+" "COMMAND" ;
-CDCOM.       CDINFO ::= "COMMAND" ;
-
--- no pause info.
-NOPAUSEINFO.      NOPAUSE ::= CDINFO;
-NOPAUSEERRCOMTPE. NOPAUSE ::= "ERROR" "+" "COMMAND" "+" "TPENABLE" ;
-NOPAUSECOMTPE.    NOPAUSE ::= "COMMAND" "+" "TPENABLE" ;
-
